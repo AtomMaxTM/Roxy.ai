@@ -84,10 +84,12 @@ class OneHot:
         label_one_hot[label] += 1
         return label_one_hot
 
+
 def load_filters() -> list:
     with open(get_config()['multiclass_classifier']['filter_path'], 'r', encoding='utf-8') as f:
         x = [(i[:-1] if i.endswith('\n') else i) for i in set(f.readlines())]
         return x
+
 
 class Filter:
     def __init__(self, filters: list | tuple = None, use_spacy: bool = False):

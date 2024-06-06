@@ -1,6 +1,8 @@
 from llama_cpp import Llama
 from core.scripts.tools import Response
 from core.scripts.config_manager import get_config
+from core.nlu.LLM.chat_store import ChatStore
+from llama_cpp.llama_chat_format import format_pygmalion
 
 class LLM:
     def __init__(self, n_gpu_layers=0):
@@ -57,7 +59,7 @@ class Model:
         if self.model is not None:
             return Response(-1, "Model already loaded")
         try:
-            self.model = Llama(model_path=self.model_path, n_ctx=self.context_size, channels)
+            self.model = Llama(model_path=self.model_path, n_ctx=self.context_size, chat_format="pygmalion")
         except Exception as e:
             return Response(0, "Something went wrong while loading the model", e)
         return Response(1, "Model loaded successfully")
@@ -71,23 +73,34 @@ class Model:
             return Response(0, "Something went wrong while unloading the model", e)
         return Response(1, "Model unloaded successfully")
 
+
 class Chat:
     def __init__(self, model):
         self.llm = model
-        self.message_stack = [{"role": "system", "content": "You are ai assistant named Roxy who communicates via messenger with her creator Max. Make responses not big and split them on smaller messages via <NEWMSG> word."}]
-        print(self.llm.load_model())
+        self.chat_store = ChatStore()
 
-    def chat_mode_generation(self, text, token_amount=40):
-        # generated = self.llm.model(f"Max: {text}.\nRoxy: ", max_tokens=token_amount, stop=[f"Max:"], temperature=0.7, echo=True)
-        self.message_stack.append({"role": "user", "content": text})
-        generated = self.llm.model.create_chat_completion(self.message_stack, stop=[f"Max:"], temperature=0.7, max_tokens=token_amount)
+    def chat_generate(self, text, token_amount=60):
+        self.chat_store.add_message('user', text)
+        generated = self.llm.model.create_chat_completion(
+            self.chat_store.messages, stop=[f"Max:"], temperature=0.7, max_tokens=token_amount
+        )
         generated = generated["choices"][0]["message"]['content']
-        self.message_stack.append({"role": "assistant", "content": generated})
-        print(self.message_stack)
+        self.chat_store.add_message('assistant', generated)
         return generated
 
-    def raw_mode_generation(self, text, token_amount=40):
+    def generate(self, text, token_amount=40):
         generated = self.llm.model(f"User: {text}.\nAssistant: ", max_tokens=token_amount, stop=[f"User:"], temperature=0.7, echo=True)
         generated = generated["choices"][0]["text"]
         return generated
 
+    def temp_set_system_message(self):
+        return self.chat_store.change_system_message('You are ai named Roxy who communicates via messenger with her boyfriend Max. Make responses not big.')
+
+    def regenerate_last(self, token_amount=60):
+        self.chat_store.remove_last_message()
+        generated = self.llm.model.create_chat_completion(
+            self.chat_store.messages, stop=[f"Max:"], temperature=0.7, max_tokens=token_amount
+        )
+        generated = generated["choices"][0]["message"]['content']
+        self.chat_store.add_message('assistant', generated)
+        return generated
