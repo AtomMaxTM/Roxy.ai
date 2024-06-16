@@ -20,8 +20,8 @@ class RVC_Model:
                 f0_method=self.config["sts_f0_method"]
             )
         except Exception as e:
-            return None, Response(0, 'An error occurred while using so-vits-svc', e)
-        return voice, Response(1, "Voice generated successfully")
+            return Response(0, 'An error occurred while using so-vits-svc', e, data=None)
+        return Response(1, "Voice generated successfully", data=voice)
 
     def reset(self):
         self.config = get_config()
@@ -52,7 +52,7 @@ class SileroModel:
 
     def raw_ssml_generate(self, text: str):
         if self.model is None:
-            return None, Response(-1, 'Model is not loaded')
+            return Response(-1, 'Model is not loaded', data=None)
         try:
             synt = self.model.apply_tts(
                 ssml_text=text,
@@ -62,13 +62,13 @@ class SileroModel:
                 put_yo=True
             ).numpy()
         except Exception as e:
-            return None, Response(0, 'An error occurred while generating raw voice with ssml via silero', e)
-        return synt, Response(1, "Raw voice with ssml was generated successfully")
+            return Response(0, 'An error occurred while generating raw voice with ssml via silero', e, data=None)
+        return Response(1, "Raw voice with ssml was generated successfully", data=synt)
 
 
     def raw_generate(self, text: str):
         if self.model is None:
-            return None, Response(-1, 'Model is not loaded')
+            return Response(-1, 'Model is not loaded', data=None)
         try:
             synt = self.model.apply_tts(
                 text=text,
@@ -78,8 +78,8 @@ class SileroModel:
                 put_yo=True
             ).numpy()
         except Exception as e:
-            return None, Response(0, 'An error occurred while generating raw voice via silero', e)
-        return synt, Response(1, "Raw voice was generated successfully")
+            return Response(0, 'An error occurred while generating raw voice via silero', e, data=None)
+        return Response(1, "Raw voice was generated successfully", data=synt)
 
     def reset(self) -> Response:
         self.config = get_config()
@@ -98,7 +98,7 @@ class TTS:
         self.config = get_config()["tts"]
 
     def __call__(self, text: str, ssml: bool = False):
-        raw_voice, res = silero.raw_generate(text) if not ssml else silero.raw_ssml_generate(text)
+        res = silero.raw_generate(text) if not ssml else silero.raw_ssml_generate(text)
         if res.status in [-1, 0]:
-            return None, res
-        return rvc(raw_voice)
+            return res
+        return rvc(res.data)
