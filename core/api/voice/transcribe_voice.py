@@ -36,7 +36,7 @@ def transcribe_realtime(timeout: int=20, debug: bool=False) -> str:
     with sd.RawInputStream(samplerate=16000, blocksize=8000, device=1,
                            dtype='int16', channels=1, callback=q_callback):
         lts = time.time()
-        condition = eval('lambda: time.time() - lts <= timeout' if timeout > 0 else 'True')
+        condition = (lambda: time.time() - lts <= timeout) if timeout > 0 else True
         while condition:
             data = q.get()
             if stt_model.model.AcceptWaveform(data):

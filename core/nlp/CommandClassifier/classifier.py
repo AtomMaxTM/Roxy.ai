@@ -6,9 +6,9 @@ import torch
 from matplotlib import pyplot as plt
 from matplotlib.gridspec import GridSpec
 
-from core.nlu.CommandClassifier.classifier_tools import tokenize, Filter
-from core.nlu.CommandClassifier.multi_model import create_model as multi
-from core.nlu.CommandClassifier.binary_model import create_model as binary
+from core.nlp.CommandClassifier.classifier_tools import tokenize, Filter
+from core.nlp.CommandClassifier.multi_model import create_model as multi
+from core.nlp.CommandClassifier.binary_model import create_model as binary
 from core.scripts.config_manager import get_config
 from core.scripts.tools import Response
 

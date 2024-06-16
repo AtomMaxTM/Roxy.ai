@@ -1,6 +1,6 @@
 core/models/voice/stt/big_stt
 core/models/voice/tts/sayu-ru/sayu.pth
-core/models/nlu/command/bin_dataset_generator/input/extract_flibusta_dialogues_clean.txt
+core/models/nlp/command/bin_dataset_generator/input/extract_flibusta_dialogues_clean.txt
 core/api/__pycache__/__init__.cpython-310.pyc
 core/scripts/__pycache__/config_manager.cpython-310.pyc
 core/api/voice/__pycache__/transcribe_voice.cpython-310.pyc
