@@ -20,6 +20,7 @@ def get_config_path():
                 break
     return config_path
 
+
 def get_config():
     config = ConfigParser()
     config.read(get_config_path(), encoding='utf-8')
