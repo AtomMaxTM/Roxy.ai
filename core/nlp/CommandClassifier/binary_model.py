@@ -8,9 +8,9 @@ from torch import nn
 from torch.utils.data import TensorDataset, DataLoader
 from tqdm import tqdm
 
-from core.models.nlu.command.bin_dataset_generator.merge_datasets import load_dataset
-from core.nlu.CommandClassifier.classifier_tools import load_config, tokenize, augment_binary
-from core.nlu.CommandClassifier.classifier_tools import config as cfg
+from core.models.nlp.command.bin_dataset_generator.merge_datasets import load_dataset
+from core.nlp.CommandClassifier.classifier_tools import load_config, tokenize, augment_binary
+from core.nlp.CommandClassifier.classifier_tools import config as cfg
 from core.scripts.config_manager import get_config
 
 config = get_config()['binary_classifier']

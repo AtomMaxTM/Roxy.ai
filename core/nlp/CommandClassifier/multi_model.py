@@ -7,7 +7,7 @@ from torch.utils.data import TensorDataset, DataLoader
 import torch.nn.functional as F
 from torch import nn
 from tqdm import tqdm
-from core.nlu.CommandClassifier.classifier_tools import load_config, config, tokenize, OneHot
+from core.nlp.CommandClassifier.classifier_tools import load_config, config, tokenize, OneHot
 
 input_size = int(config['input_size'])
 hidden_size = int(config['hidden_size'])
