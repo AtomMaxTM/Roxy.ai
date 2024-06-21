@@ -33,9 +33,11 @@ device = torch.device(
 
 torch.set_default_device(device)
 
+
 class Classifier(nn.Module):
     def __init__(self, input_size, hidden_size, num_heads):
         super(Classifier, self).__init__()
+        self.lnorm = nn.LayerNorm(input_size)
         self.lstm = nn.LSTM(input_size, hidden_size, batch_first=True)
         self.attention = MultiHeadAttention(num_heads, hidden_size//num_heads, hidden_size)
         self.gelu = nn.GELU()
@@ -44,6 +46,7 @@ class Classifier(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
+        x = self.lnorm(x)
         _, (x, _) = self.lstm(x)
         x = self.attention(x)
         x = self.gelu(x)
@@ -51,6 +54,7 @@ class Classifier(nn.Module):
         x = self.linear(x)
         x = self.sigmoid(x)
         return x
+
 
 class AttentionHead(nn.Module):
     def __init__(self, head_size, in_size):
@@ -73,6 +77,7 @@ class AttentionHead(nn.Module):
 
         return output
 
+
 class MultiHeadAttention(nn.Module):
     def __init__(self, n_heads, head_size, in_size):
         super(MultiHeadAttention, self).__init__()
@@ -80,6 +85,7 @@ class MultiHeadAttention(nn.Module):
 
     def forward(self, x):
         return torch.cat([head(x) for head in self.heads], dim=-1)
+
 
 def get_data():
     commands = [i.replace("\\", "/") for i in glob(commands_path, recursive=True)]
@@ -104,6 +110,7 @@ def get_data():
                 samples.append(j)
 
     return samples, labels
+
 
 def create_model() -> tuple[Classifier, dict[str, list[Any] | int | dict[Any, Any] | Any]]:
 
