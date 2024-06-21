@@ -80,7 +80,7 @@ class Binary:
         try:
             model, params = binary()
         except Exception as e:
-            return Response(0, "Something went wrong while training the model", e)
+            return Response(0, "Something went wrong while training binary model", e)
         self.epochs = params['epochs']
         self.loss = params['final_loss']
         self.loss_hist = params["loss_hist"]
@@ -181,7 +181,7 @@ class Multi:
         try:
             model, params = multi()
         except Exception as e:
-            return Response(0, "Something went wrong while training the model", e)
+            return Response(0, "Something went wrong while training multiclass model", e)
         self.labels = params['labels']
         self.epochs = params['epochs']
         self.loss = params['final_loss']
