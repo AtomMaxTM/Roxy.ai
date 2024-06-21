@@ -72,7 +72,7 @@ class Handler:
     def handle_text(self, text, regenerate=False):
         ic(text)
         if not regenerate:
-            text = user_to_llm(text)
+            text = " ".join(list(map(user_to_llm, self.preprocess_llm_response(text))))
             ic(text)
             answer = chat.send_message(text)
         else:
