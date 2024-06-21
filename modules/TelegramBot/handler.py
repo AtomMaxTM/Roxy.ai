@@ -93,11 +93,12 @@ class Handler:
         text = [i.strip() for i in text.split('<NEWMSG>')]
         return text
 
-    def handle_voice(self, voice):
+    def handle_voice(self, voice, bot, message):
         voice, _ = librosa.load(BytesIO(voice), sr=16000)
         text = transcribe_audio(voice)
         text = enhance(text, len_limit=500)
-        return self.handle_text(text), text
+        transcribed_id = bot.reply_to(message, f'Я услышала: "<i>{text}</i>"', parse_mode='html')
+        return self.handle_text(text), transcribed_id
 
     def gen_voice_message(self, messages):
         text = f"<speak><p>{' '.join([f'<s>{i}</s>' for i in messages])}</p></speak>"
