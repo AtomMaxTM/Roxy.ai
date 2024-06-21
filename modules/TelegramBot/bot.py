@@ -76,7 +76,7 @@ def help_cmd(message):
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("Удалить сообщение", callback_data="delete"))
     text = """
-<b>Привет, я Рокси!</b>.
+<b>Привет, я Рокси!</b>
 
 Со мной можно общатся через голосовые и текстовые сообщения.
 
@@ -141,7 +141,7 @@ def restart(message):
         return
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("Нет ❌", callback_data="delete"))
-    markup.add(InlineKeyboardButton("Да ✅", callback_data="reset"))
+    markup.add(InlineKeyboardButton("Да ✅", callback_data="restart"))
     bot.send_message(
         message.chat.id,
              'Ты уверен что хочешь перезапустить бота?',
@@ -172,7 +172,7 @@ def remove2(message):
 
 
 @dec.restricted()
-@bot.message_handler(commands=['resetchat'])
+@bot.message_handler(commands=['reset'])
 def reset(message):
     bot.delete_message(message.chat.id, message.id)
     if answering.state:
@@ -251,6 +251,7 @@ def handle_reset(call):
 
 @bot.callback_query_handler(func=lambda call: call.data == 'restart')
 def handle_restart(call):
+    bot.delete_message(call.message.chat.id, call.message.message_id)
     answering.set_state(True)
     global handler
     global stack
@@ -262,8 +263,9 @@ def handle_restart(call):
             bot.delete_message(call.message.chat.id, i.id)
         bot.delete_message(call.message.chat.id, res.data['user_msg'].id)
     chat.reset_chat()
-    info.change('Пересоздаю обработчик...')
+    info.change('Перезагружаю обработчик...')
     handler = Handler()
+    handler.prepare_chat()
     stack = MessageStack()
     info.delete()
     send_message(call.message, 'Система успешно перезагружена!', 5)
