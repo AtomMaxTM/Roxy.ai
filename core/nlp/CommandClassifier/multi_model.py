@@ -29,6 +29,7 @@ torch.set_default_device(device)
 class Classifier(nn.Module):
     def __init__(self, input_size, hidden_size, output_size, num_heads):
         super(Classifier, self).__init__()
+        self.lnorm = nn.LayerNorm(input_size)
         self.lstm = nn.LSTM(input_size, hidden_size, batch_first=True)
         self.attention = MultiHeadAttention(num_heads, hidden_size // num_heads, hidden_size)
         self.gelu = nn.GELU()
@@ -37,6 +38,7 @@ class Classifier(nn.Module):
         self.softmax = nn.Softmax(1)
 
     def forward(self, x):
+        x = self.lnorm(x)
         _, (x, _) = self.lstm(x)
         x = self.attention(x)
         x = self.gelu(x)
@@ -121,7 +123,6 @@ def create_model() -> tuple[Classifier, dict[str, list[Any] | int | dict[Any, An
     enc = OneHot(labels_len, dtype=torch.float32)
 
     labels = [enc(i) for i in labels]
-
     embeddings = torch.stack(tokenize(samples))
     dataset = TensorDataset(embeddings,
                             torch.stack(labels))

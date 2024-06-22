@@ -50,6 +50,7 @@ class ChatStore:
         self.store = self.store[:-1]
         return Response(1, 'Last message removed successfully')
 
+    @autosave
     def reset_chat(self):
         self.__init__()
         return Response(1, 'Chat reset successfully')

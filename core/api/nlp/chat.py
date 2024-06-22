@@ -23,7 +23,7 @@ def model_check():
 
 
 def load_model(path=get_config()['llm']['model_path']):
-    response = md.load_model()
+    response = md.load_model(path)
     return response
 
 
