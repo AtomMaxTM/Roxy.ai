@@ -18,9 +18,7 @@ clear = lambda x: x.translate(spc_dict)
 
 Navec_model = Navec.load(config['word2vec_path'])
 sp = spacy.load("ru_core_news_md")
-UNK = torch.rand((1, 300), dtype=torch.float32)
 EMP = torch.rand((1, 300), dtype=torch.float32)
-wrong_size = torch.Size((1, 300))
 
 
 def tokenize(texts: list) -> list[Tensor | Any]:
@@ -30,14 +28,10 @@ def tokenize(texts: list) -> list[Tensor | Any]:
     for text in texts:
         samples = []
         for word in sp(text):
-            try:
-                temp = Navec_model[word.lemma_]
-            except KeyError:
-                samples.append(UNK)
-            else:
-                samples.append(torch.tensor(temp, dtype=torch.float32).reshape([1, 300]))
+            emb = Navec_model.vocab.get(word.lemma_, Navec_model.vocab.unk_id)
+            samples.append(torch.tensor(emb, dtype=torch.float32).reshape([1, 300]))
         if len(samples) == 0:
-            result.append(EMP)
+            result.append(Navec_model['<pad>'])
 
         result.append(torch.mean(torch.stack(samples), 0) if len(samples) > 1 else samples[0])
 
