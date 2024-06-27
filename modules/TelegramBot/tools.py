@@ -13,6 +13,8 @@ class Decorators:
         def deco_restrict(f):
             @wraps(f)
             def f_restrict(message, *args, **kwargs):
+                if type(message) == tuple:
+                    return f(message, *args, **kwargs)
                 userid = message.from_user.id
                 if (userid == self.id) or not self.strict:
                     return f(message, *args, **kwargs)

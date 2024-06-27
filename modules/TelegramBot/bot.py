@@ -3,6 +3,7 @@ from asyncio import sleep
 from threading import Thread
 
 import dotenv
+from icecream import ic
 from telebot import TeleBot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
@@ -129,16 +130,21 @@ def regen(message):
     for i in reversed(res.data['msgs']):
         bot.delete_message(message.chat.id, i.id)
 
-    return text_message_handler(res.data['user_msg'], regenerate=True)
+    ic(res.data)
+    print(res.data['user_msg'])
+    print(res.data['transcribed'])
+    if res.data.get('transcribed') is not None:
+        res.data['user_msg'] = (res.data['user_msg'], res.data['transcribed'])
+    return text_message_handler(res.data['user_msg'], regenerate=True, regenerate_voice=res.data.get('transcribed') is not None)
 
 
 @dec.restricted()
 @bot.message_handler(commands=['restart'])
 def restart(message):
     bot.delete_message(message.chat.id, message.id)
-    if answering.state:
-        send_message(message, '<b>Я не могу перезапустится пока отвечаю!</b>', time=5)
-        return
+    # if answering.state:
+    #     send_message(message, '<b>Я не могу перезапустится пока отвечаю!</b>', time=5)
+    #     return
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("Нет ❌", callback_data="delete"))
     markup.add(InlineKeyboardButton("Да ✅", callback_data="restart"))
@@ -163,6 +169,8 @@ def remove2(message):
         return None
     for i in reversed(res.data['msgs']):
         bot.delete_message(message.chat.id, i.id)
+    if res.data.get('transcribed') is not None:
+        bot.delete_message(message.chat.id, res.data.get('transcribed').id)
     bot.delete_message(message.chat.id, res.data['user_msg'].id)
 
     for i in range(2):
@@ -201,8 +209,8 @@ def voice_message_handler(message):
     voice_file = bot.download_file(voice_message_info.file_path)
     temp, transcribed_id = handler.handle_voice(voice_file, bot, message)
     voice, text = temp
-    ids = {'msgs': [], 'user_msg': message.id}
-    ids['msgs'].append(transcribed_id)
+    ids = {'msgs': [], 'user_msg': message}
+    ids['transcribed'] = transcribed_id
     for msg in text:
         ids['msgs'].append(bot.send_message(message.chat.id, msg))
         sleep(choice(delay))
@@ -213,14 +221,18 @@ def voice_message_handler(message):
 
 @dec.restricted()
 @bot.message_handler(content_types=['text'])
-def text_message_handler(message, regenerate=False):
+def text_message_handler(message, regenerate=False, regenerate_voice=False):
     if answering.state:
         send_message(message, '<b>Я отвечаю, будь терпелив</b>', time=5)
         bot.delete_message(message.chat.id, message.id)
         return
     answering.set_state(True)
-    voice, text = handler.handle_text(message.text, regenerate)
-    ids = {'msgs': [], 'user_msg': message}
+    ids = {'msgs': [], 'user_msg': message if not regenerate_voice else message[0]}
+    if regenerate_voice:
+        ids['transcribed'] = message[1]
+    voice, text = handler.handle_text(message.text if not regenerate_voice else message[1].text[13:-1], regenerate)
+    if regenerate_voice:
+        message = message[0]
     for msg in text:
         sleep(choice(delay))
         ids['msgs'].append(bot.send_message(message.chat.id, msg))
@@ -243,6 +255,8 @@ def handle_reset(call):
         res = stack.pull()
         for i in reversed(res.data['msgs']):
             bot.delete_message(call.message.chat.id, i.id)
+        if res.data.get('transcribed') is not None:
+            bot.delete_message(call.message.chat.id, res.data.get('transcribed').id)
         bot.delete_message(call.message.chat.id, res.data['user_msg'].id)
     chat.reset_chat()
     handler.prepare_chat()
@@ -261,6 +275,8 @@ def handle_restart(call):
         res = stack.pull()
         for i in reversed(res.data['msgs']):
             bot.delete_message(call.message.chat.id, i.id)
+        if res.data.get('transcribed') is not None:
+            bot.delete_message(call.message.chat.id, res.data.get('transcribed').id)
         bot.delete_message(call.message.chat.id, res.data['user_msg'].id)
     chat.reset_chat()
     info.change('Перезагружаю обработчик...')
