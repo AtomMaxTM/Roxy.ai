@@ -4,6 +4,7 @@ from core.scripts.config_manager import get_config
 from core.nlp.chat.store import ChatStore
 
 
+
 class Model:
     def __init__(self):
         self.st = get_config()["llm"]
