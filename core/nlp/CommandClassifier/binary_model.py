@@ -12,7 +12,7 @@ from core.models.nlp.command.bin_dataset_generator.merge_datasets import load_da
 from core.nlp.CommandClassifier.classifier_tools import load_config, tokenize, augment_binary
 from core.nlp.CommandClassifier.classifier_tools import config as cfg
 from core.scripts.config_manager import get_config
-
+    
 config = get_config()['binary_classifier']
 commands_path = cfg['commands_path']
 input_size = int(config['input_size'])
