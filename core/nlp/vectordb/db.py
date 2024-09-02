@@ -3,18 +3,26 @@ from transformers import pipeline
 import os
 from typing import List, Dict, Any
 from uuid import uuid4
-from core.scripts.tools import get_config
+from core.scripts.tools import get_config, Response
 
 path = get_config()['vector_db']['db_path']
 
 
 class Embedder:
     def __init__(self, model_path):
-        if os.path.exists(model_path):
-            self.pipe = pipeline('feature-extraction', model_path, return_tensors='pt')
+        if not os.path.exists(model_path):
+            raise ValueError(f'{model_path} is invalid model path')
+        self.model_path = model_path
+        self.loaded = False
+
+    def load(self):
+        if not self.loaded:
+            self.pipe = pipeline('feature-extraction', self.model_path, return_tensors='pt')
             self.size_embed = self.pipe.model.config.hidden_size
         else:
-            raise ValueError(f'{model_path} is invalid model path')
+            return Response(-1, 'Model is loaded')
+        self.loaded = True
+        return Response(1)
 
     def __call__(self, text):
         return self.pipe(text)
@@ -29,10 +37,13 @@ class VectorDB:
         self.embed = embedder
 
     def create_collection(self, collection_name: str):
+        if self.client.collection_exists(collection_name):
+            return Response(-1, 'Collection already exists')
         self.client.create_collection(
             collection_name=collection_name,
             vectors_config=qdrant_models.VectorParams(size=self.embed.size, distance=qdrant_models.Distance.COSINE),
         )
+        return Response(1)
 
     def add(self, collection_name: str, vectors: list[list[float]], payloads: list[dict[str, Any]], uids: list):
         points = [
@@ -56,7 +67,7 @@ class VectorDB:
         )
         return search_result
 
-    def delete_by_id(self, collection_name: str, ids: List[str]):
+    def delete_by_id(self, collection_name: str, ids: list[str]):
         self.client.delete(collection_name=collection_name, points_selector=qdrant_models.PointIdsList(points=ids))
 
     def delete_collection(self, collection_name: str):
@@ -70,13 +81,13 @@ class MessageDB:
 
     def add_message(self, message: str, role: str) -> str:
         unique_id = str(uuid4())
-        vector = self.db.embed(message)[:, 0, :]
+        vector = self.db.embed(message).squeeze(0).tolist()[0]
         payload = {"message": message, "role": role, "id": unique_id}
         self.db.add(self.collection_name, [vector], [payload], [unique_id])
         return unique_id
 
-    def search_messages(self, message: str, top_k: int = 5) -> List[Dict[str, Any]]:
-        vector = self.db.embed(message)[:, 0, :]
+    def search(self, message: str, top_k: int = 5) -> List[Dict[str, Any]]:
+        vector = self.db.embed(message).squeeze(0).tolist()[0]
         search_results = self.db.search(self.collection_name, vector, top_k)
         return [{"message": result.payload['message'], "id": result.payload['id']} for result in search_results]
 
