@@ -1,0 +1,6 @@
+llama-cpp-python
+fastapi[standard]
+sounddevice
+torch
+transformers
+qdrant_client

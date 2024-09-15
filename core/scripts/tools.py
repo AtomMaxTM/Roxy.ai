@@ -6,7 +6,7 @@ import sounddevice as sd
 from core.scripts.config_manager import get_config
 from datetime import datetime
 
-sr = int(get_config()['tts']['tts_sample_rate'])
+samplerate = int(get_config()['tts']['tts_sample_rate'])
 
 log.basicConfig(filename=get_config()['log']['logfile'], level=log.ERROR,
                     format='%(asctime)s - %(levelname)s : %(message)s',
@@ -30,7 +30,7 @@ class Response:
         return f'Response(status={self.status}, message="{self.message}", data={self.data}, error={self.error})'
 
 
-def say(data):
+def say(data, sr=samplerate):
     sd.play(data, samplerate=sr)
     sd.wait()
     sd.stop()

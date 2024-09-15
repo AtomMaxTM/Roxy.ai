@@ -7,9 +7,11 @@ from core.nlp.chat.LLM import Chat, Model
 from core.nlp.lang_tools.enhance import Enhance
 from core.nlp.lang_tools.translate_local import Translator
 from core.nlp.vectordb.db import MessageDB, VectorDB, Embedder
+from urllib.parse import unquote, quote
+
+app = FastAPI()
 
 # Loading model instances
-
 emb = Embedder('E:/Programming/AI_Models/BERT_Models/bert-base-uncased')
 vdb = VectorDB('src/long_term_memory_db', emb)
 db = MessageDB(vdb)
@@ -27,17 +29,6 @@ response = translator.load_ru_en_model()
 if not response.status:
     raise response.error
 emb.load()
-
-# FastAPI
-app = FastAPI()
-
-vdb_router = APIRouter(
-    prefix='/vectordb'
-)
-llm_router = APIRouter(
-    prefix='/llm'
-)
-
 
 # Pydantic
 
@@ -90,29 +81,30 @@ class ChatRegenerate(BaseModel):
 # Vector Storage
 
 #       Embedder
-@app.get('/embed')
+@app.get('/nlp/embed')
 async def embed(message: Text):
     message = message.dict()['text']
+    message = unquote(message)
     data = emb(message).squeeze(0).tolist()[0]
     return {'embedding': data}
 
 
 #       Vector DB
-@vdb_router.get('/db/create_collection')
+@app.get('/nlp/chat/db/create_collection')
 async def create_collection(name: Text):
-    name = name.dict()['text']
+    name = unquote(name.dict()['text'])
     res = vdb.create_collection(name)
     if res.status == -1:
-        return {'status': 0, 'message': res.message}
+        return {'status': 0, 'message': quote(res.message)}
     return {'status': 1}
 
 
-@vdb_router.get('/db/add')
+@app.get('/nlp/chat/db/add')
 async def add_vdb(body: Add_VDB):
     body = body.dict()
     try:
         vdb.add(
-            body['collection_name'],
+            unquote(body['collection_name']),
             body['vectors'],
             body['payloads'],
             body['uids']
@@ -122,12 +114,12 @@ async def add_vdb(body: Add_VDB):
     return {'status': 1}
 
 
-@vdb_router.get('/db/search')
+@app.get('/nlp/chat/db/search')
 async def search_vdb(body: Search_VDB):
     body = body.dict()
     try:
         res = vdb.search(
-            body['collection_name'],
+            unquote(body['collection_name']),
             body['vector'],
             body['top_k']
         )
@@ -136,12 +128,12 @@ async def search_vdb(body: Search_VDB):
     return {'status': 1, 'search_result': res}
 
 
-@vdb_router.get('/db/delete_by_id')
+@app.get('/nlp/chat/db/delete_by_id')
 async def del_by_id(body: Del_by_id_VDB):
     body = body.dict()
     try:
         vdb.delete_by_id(
-            body['collection_name'],
+            unquote(body['collection_name']),
             body['ids']
         )
     except Exception as e:
@@ -149,10 +141,10 @@ async def del_by_id(body: Del_by_id_VDB):
     return {'status': 1}
 
 
-@vdb_router.get('/db/delete_collection')
+@app.get('/nlp/chat/db/delete_collection')
 async def del_delete(body: Text):
     try:
-        vdb.delete_collection(body.dict()['text'])
+        vdb.delete_collection(unquote(body.dict()['text']))
     except Exception as e:
         return {'status': 0, 'message': e}
     return {'status': 1}
@@ -160,37 +152,37 @@ async def del_delete(body: Text):
 
 #       Message DB
 
-@vdb_router.get('/msg/add')
+@app.get('/nlp/chat/msg_add')
 async def add_mdb(body: Add_VDB):
     body = body.dict()
     try:
-        uid = db.add_message(body['message'], body['role'])
+        uid = db.add_message(unquote(body['message']), unquote(body['role']))
     except Exception as e:
         return {'status': 0, 'message': e}
     return {'status': 1, 'msg_id': uid}
 
 
-@vdb_router.get('/msg/search')
+@app.get('/nlp/chat/msg/search')
 async def search_mdb(body: Search_MDB):
     body = body.dict()
     try:
-        res = db.search(body['message'], body['top_k'])
+        res = db.search(unquote(body['message']), body['top_k'])
     except Exception as e:
         return {'status': 0, 'message': e}
     return {'status': 1, 'search_result': res}
 
 
-@vdb_router.get('/msg/del_by_id')
+@app.get('/nlp/chat/msg/del_by_id')
 async def delete_message(body: Del_by_id_MDB):
     body = body.dict()
     try:
-        db.delete_message(body['message_id'])
+        db.delete_message(unquote(body['message_id']))
     except Exception as e:
         return {'status': 0, 'message': e}
     return {'status': 1}
 
 
-@vdb_router.get('/msg/delete_all')
+@app.get('/nlp/chat/msg/delete_all')
 async def delete_all():
     try:
         db.delete_all_messages()
@@ -201,116 +193,114 @@ async def delete_all():
 
 # Translator
 
-@app.get('/translate/ru_en')
+@app.get('/nlp/translate/ru_en')
 async def user_to_llm(text: Text):
     text = text.dict()['text']
-    text = translator.ru_to_en(text)
+    text = translator.ru_to_en(unquote(text))
     if not text.status:
         return {'status': 0, 'message': text.error}
-    return {'status': 1, 'text': text.data}
+    return {'status': 1, 'text': quote(text.data)}
 
 
-@app.get('/translate/en_ru')
+@app.get('/nlp/translate/en_ru')
 async def llm_to_user(text: Text):
     text = text.dict()['text']
-    text = translator.en_to_ru(text)
+    text = translator.en_to_ru(unquote(text))
     if not text.status:
         return {'status': 0, 'message': text.error}
-    return {'status': 1, 'text': text.data}
+    return {'status': 1, 'text': quote(text.data)}
 
 
 # Text Enhance
 
-@app.get('/enhance')
+@app.get('/nlp/enhance')
 async def enhance(text: Text):
     text = text.dict()['text']
+    text = unquote(text)
     text = e.enhance(text)
     if not text.status:
         return {'status': 0, 'message': text.error}
-    return {'status': 1, 'text': text.data}
+    return {'status': 1, 'text': quote(text.data)}
 
 
 # LLM
 
 #   Model
-@llm_router.get('/raw/generate')
+@app.get('/nlp/chat/raw_generate')
 async def generate(body: ModelGenerate):
     body = body.dict()
-    generated = md.model(body['prompt'], max_tokens=body['max_tokens'], stop=[f"User:"],
+    generated = md.model(unquote(body['prompt']), max_tokens=body['max_tokens'], stop=[f"User:"],
                          temperature=body['temp'], echo=True)
     generated = generated["choices"][0]["text"]
-    return {'generated': generated}
-
-
-# @llm_router.get('/raw/')
+    return {'generated': quote(generated)}
 
 #   Chat
 
-@llm_router.get('/chat/generate')
+@app.get('/nlp/chat/generate')
 async def chat_generate(body: ModelGenerate):
     body = body.dict()
     generate = chat.chat_generate(
-        body['prompt'],
+        unquote(body['prompt']),
         body['max_tokens']
     )
-    return {'generated': generate}
+    return {'generated': quote(generate)}
 
 
-@llm_router.get('/chat/regenerate')
+@app.get('/nlp/chat/regenerate')
 async def chat_regenerate(body: ChatRegenerate):
     body = body.dict()
     generate = chat.chat_generate(
         body['max_tokens']
     )
-    return {'generated': generate}
+    return {'generated': quote(generate)}
 
 
 #   Store
 
-@llm_router.get('/chat/history')
+@app.get('/nlp/chat/history')
 async def get_history():
     return chat.store.chat
 
 
-@llm_router.get('/chat/reset')
+@app.get('/nlp/chat/reset')
 async def reset():
     chat.store.reset_chat()
     return {'status': 1}
 
 
-@llm_router.get('/chat/system_message')
+@app.get('/nlp/chat/system_message')
 async def get_system_message():
-    return {'system_message': chat.store.system_message}
+    return {'system_message': quote(chat.store.system_message['content'])}
 
 
-@llm_router.get('/chat/set_system_message')
+@app.get('/nlp/chat/set_system_message')
 async def set_system_message(body: Text):
     body = body.dict()
     chat.store.change_system_message(body['text'])
     return {'status': 1}
 
 
-@llm_router.get('/chat/remove_last_message')
+@app.get('/nlp/chat/remove_last_message')
 async def remove_last_message():
     res = chat.store.remove_last_message()
     if not res.status:
-        return {'status': 0, 'message': res.message}
+        return {'status': 0, 'message': quote(res.message)}
     return {'status': 1}
 
 
-@llm_router.get('/chat/change_last_message')
+@app.get('/nlp/chat/change_last_message')
 async def change_last_message(body: Text):
     body = body.dict()
     res = chat.store.change_last_message(body['text'])
     if res.status == -1:
-        return {'status': 0, 'message': res.message}
+        return {'status': 0, 'message': quote(res.message)}
     return {'status': 1}
 
 
-@llm_router.get('/chat/change_last_user_message')
+@app.get('/nlp/chat/change_last_user_message')
 async def change_last_message(body: Text):
     body = body.dict()
     res = chat.store.change_last_user_message(body['text'])
     if res.status == -1:
-        return {'status': 0, 'message': res.message}
+        return {'status': 0, 'message': quote(res.message)}
     return {'status': 1}

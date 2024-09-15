@@ -1,2 +1,1 @@
-from modules.TelegramBot.bot import run
-run()
+import core.servers.nlp.nlp_server
