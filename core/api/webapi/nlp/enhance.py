@@ -1,32 +1,23 @@
-from typing import Literal
+from urllib.parse import unquote, quote
 
-from core.nlp.lang_tools.enhance import Enhance
+from core.scripts.tools import api_request
+from core.scripts.config_manager import get_config
 
-e = Enhance()
-response = e.load_model()
-if not response.status:
-    raise response.error
 
-def enhance(
-        text: str,
-        lang:Literal['en', 'de', 'ru', 'es'] = 'ru',
-        len_limit=150
-) -> str:
+def enhance(text: str) -> str:
     """
     NLP API function that enhances text
 
-    It makes letters capital and puts those ['-', ',', '.', '!', '?'] symbols
     Example:
         Before: 'afterwards we were taken to one of the undamaged dormitory buildings'
-
         After: 'Afterwards, we were taken to one of the undamaged dormitory buildings.'
-
-    Supported languages: 'en', 'de', 'ru', 'es'
 
     :param text: raw text to enhance
     :return: enhanced text
     """
-    x = e.enhance(text, lang, len_limit)
-    if not x.status:
-        raise x.error
-    return x.data
+    return unquote(
+        api_request(
+            get_config().get('server_urls').get('nlp_url')+'/nlp/enhance',
+            {'text': quote(text)}
+        )['text']
+    )

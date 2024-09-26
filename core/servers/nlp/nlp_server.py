@@ -1,13 +1,14 @@
 from typing import Any
+from urllib.parse import unquote, quote
 
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI
 from pydantic import BaseModel
 
 from core.nlp.chat.LLM import Chat, Model
 from core.nlp.lang_tools.enhance import Enhance
 from core.nlp.lang_tools.translate_local import Translator
 from core.nlp.vectordb.db import MessageDB, VectorDB, Embedder
-from urllib.parse import unquote, quote
+from core.scripts.config_manager import get_config
 
 app = FastAPI()
 
@@ -29,6 +30,7 @@ response = translator.load_ru_en_model()
 if not response.status:
     raise response.error
 emb.load()
+
 
 # Pydantic
 
@@ -95,7 +97,7 @@ async def create_collection(name: Text):
     name = unquote(name.dict()['text'])
     res = vdb.create_collection(name)
     if res.status == -1:
-        return {'status': 0, 'message': quote(res.message)}
+        return {'status': 0, 'error': quote(res.message)}
     return {'status': 1}
 
 
@@ -110,7 +112,7 @@ async def add_vdb(body: Add_VDB):
             body['uids']
         )
     except Exception as e:
-        return {'status': 0, 'message': e}
+        return {'status': 0, 'error': e}
     return {'status': 1}
 
 
@@ -124,7 +126,7 @@ async def search_vdb(body: Search_VDB):
             body['top_k']
         )
     except Exception as e:
-        return {'status': 0, 'message': e}
+        return {'status': 0, 'error': e}
     return {'status': 1, 'search_result': res}
 
 
@@ -137,7 +139,7 @@ async def del_by_id(body: Del_by_id_VDB):
             body['ids']
         )
     except Exception as e:
-        return {'status': 0, 'message': e}
+        return {'status': 0, 'error': e}
     return {'status': 1}
 
 
@@ -146,7 +148,7 @@ async def del_delete(body: Text):
     try:
         vdb.delete_collection(unquote(body.dict()['text']))
     except Exception as e:
-        return {'status': 0, 'message': e}
+        return {'status': 0, 'error': e}
     return {'status': 1}
 
 
@@ -158,7 +160,7 @@ async def add_mdb(body: Add_VDB):
     try:
         uid = db.add_message(unquote(body['message']), unquote(body['role']))
     except Exception as e:
-        return {'status': 0, 'message': e}
+        return {'status': 0, 'error': e}
     return {'status': 1, 'msg_id': uid}
 
 
@@ -168,7 +170,7 @@ async def search_mdb(body: Search_MDB):
     try:
         res = db.search(unquote(body['message']), body['top_k'])
     except Exception as e:
-        return {'status': 0, 'message': e}
+        return {'status': 0, 'error': e}
     return {'status': 1, 'search_result': res}
 
 
@@ -178,7 +180,7 @@ async def delete_message(body: Del_by_id_MDB):
     try:
         db.delete_message(unquote(body['message_id']))
     except Exception as e:
-        return {'status': 0, 'message': e}
+        return {'status': 0, 'error': e}
     return {'status': 1}
 
 
@@ -187,7 +189,7 @@ async def delete_all():
     try:
         db.delete_all_messages()
     except Exception as e:
-        return {'status': 0, 'message': e}
+        return {'status': 0, 'error': e}
     return {'status': 1}
 
 
@@ -198,7 +200,7 @@ async def user_to_llm(text: Text):
     text = text.dict()['text']
     text = translator.ru_to_en(unquote(text))
     if not text.status:
-        return {'status': 0, 'message': text.error}
+        return {'status': 0, 'error': text.error}
     return {'status': 1, 'text': quote(text.data)}
 
 
@@ -207,7 +209,7 @@ async def llm_to_user(text: Text):
     text = text.dict()['text']
     text = translator.en_to_ru(unquote(text))
     if not text.status:
-        return {'status': 0, 'message': text.error}
+        return {'status': 0, 'error': text.error}
     return {'status': 1, 'text': quote(text.data)}
 
 
@@ -219,7 +221,7 @@ async def enhance(text: Text):
     text = unquote(text)
     text = e.enhance(text)
     if not text.status:
-        return {'status': 0, 'message': text.error}
+        return {'status': 0, 'error': text.error}
     return {'status': 1, 'text': quote(text.data)}
 
 
@@ -230,9 +232,10 @@ async def enhance(text: Text):
 async def generate(body: ModelGenerate):
     body = body.dict()
     generated = md.model(unquote(body['prompt']), max_tokens=body['max_tokens'], stop=[f"User:"],
-                         temperature=body['temp'], echo=True)
+                         temperature=0.8, echo=True)
     generated = generated["choices"][0]["text"]
     return {'generated': quote(generated)}
+
 
 #   Chat
 
@@ -247,11 +250,8 @@ async def chat_generate(body: ModelGenerate):
 
 
 @app.get('/nlp/chat/regenerate')
-async def chat_regenerate(body: ChatRegenerate):
-    body = body.dict()
-    generate = chat.chat_generate(
-        body['max_tokens']
-    )
+async def chat_regenerate():
+    generate = chat.regenerate_last()
     return {'generated': quote(generate)}
 
 
@@ -259,7 +259,7 @@ async def chat_regenerate(body: ChatRegenerate):
 
 @app.get('/nlp/chat/history')
 async def get_history():
-    return chat.store.chat
+    return {"chat": chat.store.chat}
 
 
 @app.get('/nlp/chat/reset')
@@ -273,6 +273,11 @@ async def get_system_message():
     return {'system_message': quote(chat.store.system_message['content'])}
 
 
+@app.get('/nlp/chat/name')
+async def get_chat_name():
+    return {'name': quote(chat.store.chat_name)}
+
+
 @app.get('/nlp/chat/set_system_message')
 async def set_system_message(body: Text):
     body = body.dict()
@@ -284,23 +289,40 @@ async def set_system_message(body: Text):
 async def remove_last_message():
     res = chat.store.remove_last_message()
     if not res.status:
-        return {'status': 0, 'message': quote(res.message)}
+        return {'status': 0, 'error': quote(res.message)}
     return {'status': 1}
 
 
 @app.get('/nlp/chat/change_last_message')
 async def change_last_message(body: Text):
     body = body.dict()
-    res = chat.store.change_last_message(body['text'])
+    res = chat.store.change_last_message(unquote(body['text']))
     if res.status == -1:
-        return {'status': 0, 'message': quote(res.message)}
+        return {'status': 0, 'error': quote(res.message)}
     return {'status': 1}
 
 
 @app.get('/nlp/chat/change_last_user_message')
-async def change_last_message(body: Text):
+async def change_last_user_message(body: Text):
     body = body.dict()
-    res = chat.store.change_last_user_message(body['text'])
+    res = chat.store.change_last_user_message(unquote(body['text']))
     if res.status == -1:
-        return {'status': 0, 'message': quote(res.message)}
+        return {'status': 0, 'error': quote(res.message)}
+    return {'status': 1}
+
+
+@app.get('/nlp/chat/model_loaded')
+async def model_loaded():
+    if md.model is not None:
+        return {'is_loaded': True}
+    else:
+        return {'is_loaded': False}
+
+
+@app.get('/nlp/chat/reload_model')
+async def load_model():
+    md.unload_model()
+    res = md.load_model(get_config()['llm']['model_path'])
+    if not res.status:
+        return {'status': 0, 'error': res.error}
     return {'status': 1}

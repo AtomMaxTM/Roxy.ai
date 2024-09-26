@@ -69,16 +69,16 @@ class SileroModel:
     def raw_generate(self, text: str):
         if self.model is None:
             return Response(-1, 'Model is not loaded', data=None)
-        try:
-            synt = self.model.apply_tts(
-                text=text,
-                speaker=self.config["tts_speaker"],
-                sample_rate=int(self.config['tts_sample_rate']),
-                put_accent=True,
-                put_yo=True
-            ).numpy()
-        except Exception as e:
-            return Response(0, 'An error occurred while generating raw voice via silero', e, data=None)
+        # try:
+        synt = self.model.apply_tts(
+            text=text,
+            speaker=self.config["tts_speaker"],
+            sample_rate=int(self.config['tts_sample_rate']),
+            put_accent=True,
+            put_yo=True
+        ).numpy()
+        # except Exception as e:
+        #     return Response(0, 'An error occurred while generating raw voice via silero', e, data=None)
         return Response(1, "Raw voice was generated successfully", data=synt)
 
     def reset(self) -> Response:

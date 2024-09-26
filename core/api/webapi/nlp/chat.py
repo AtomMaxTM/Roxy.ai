@@ -1,18 +1,18 @@
-from core.nlp.chat.LLM import Chat, Model
 from core.scripts.config_manager import get_config
 from functools import wraps
+from urllib.parse import unquote, quote
+from core.scripts.tools import Response, api_request
 
-from core.scripts.tools import Response
 
-md = Model()
-chat = Chat(md)
+def is_model_loaded():
+    return api_request(get_config().get('server_urls').get('nlp_url') + '/nlp/chat/model_loaded')['is_loaded']
 
 
 def model_check():
     def is_loaded_deco(f):
         @wraps(f)
         def func(*args, **kwargs):
-            if md.model is not None:
+            if is_model_loaded():
                 return f(*args, **kwargs)
             else:
                 return Response(-1, 'Model is not loaded')
@@ -22,89 +22,77 @@ def model_check():
     return is_loaded_deco
 
 
-def load_model(path=get_config()['llm']['model_path']):
-    response = md.load_model(path)
-    return response
+def load_model():
+    return api_request(get_config().get('server_urls').get('nlp_url') + '/nlp/chat/reload_model')
 
 
 def reset_chat():
-    return chat.store.reset_chat()
+    return api_request(get_config().get('server_urls').get('nlp_url') + "/nlp/chat/reset")
 
 
-@model_check()
-def unload_model():
-    response = md.unload_model()
-    return response
-
-
-@model_check()
-def get_chat():
-    return chat.store.chat
-
-@model_check()
-def get_messages():
-    return chat.store.messages
-
-@model_check()
-def is_empty():
-    return chat.store.is_empty
-
-@model_check()
-def get_chat_name():
-    return chat.store.chat_name
-
-@model_check()
-def remove_last_message():
-    return chat.store.remove_last_message()
-
-@model_check()
-def current_system_message():
-    return chat.store.system_message
-
-@model_check()
-def change_system_message(msg):
-    return chat.store.change_system_message(msg)
-
-
-@model_check()
-def change_last_message(msg):
-    return chat.store.change_last_message(msg)
-
-@model_check()
-def change_last_user_message(msg):
-    return chat.store.change_last_user_message(msg)
+# @model_check()
+# def unload_model():
+#     response = md.unload_model()
+#     return response
 
 
 @model_check()
 def send_message(msg, new_tokens=60):
-    return chat.chat_generate(msg, new_tokens)
+    return unquote(
+        api_request(get_config().get('server_urls').get('nlp_url') + '/nlp/chat/generate', {'prompt': quote(msg), 'max_tokens': new_tokens})['generated'])
 
 
 @model_check()
 def generate_no_chat(msg, new_tokens=60):
-    return chat.generate(msg, new_tokens)
+    return unquote(
+        api_request(get_config().get('server_urls').get('nlp_url') + '/nlp/chat/raw_generate', {'prompt': quote(msg), 'max_tokens': new_tokens})['generated'])
 
 
 @model_check()
 def regenerate_last_message():
-    return chat.regenerate_last()
+    return unquote(api_request(get_config().get('server_urls').get('nlp_url') + '/nlp/chat/regenerate')['generated'])
+
+
+# @model_check()
+# def load_chat(chat_name):
+#     return chat.store.load_chat(chat_name)
+
 
 @model_check()
-def save_chat_to_file(chat_name):
-    return chat.store.save_chat(get_config()['chat']['chat_name'] + chat_name)
+def get_chat():
+    return api_request(get_config().get('server_urls').get('nlp_url') + "/nlp/chat/history")['chat']
+
 
 @model_check()
-def save_chat():
-    return chat.store.save_chat(get_config()['chat']['chat_name'] + chat.store.chat_name)
+def is_empty():
+    return bool(len(api_request(get_config().get('server_urls').get('nlp_url') + "/nlp/chat/history")['chat'][1:]))
+
 
 @model_check()
-def load_chat(chat_name):
-    return chat.store.load_chat(chat_name)
+def get_chat_name():
+    return api_request(get_config().get('server_urls').get('nlp_url') + "/nlp/chat/history")['chat']
+
 
 @model_check()
-def load_system_message(filename):
-    return chat.store.load_system_message(filename)
+def remove_last_message():
+    return api_request(get_config().get('server_urls').get('nlp_url') + "/nlp/chat/remove_last_message")
+
 
 @model_check()
-def get_system_message(filename):
-    return chat.store.get_system_message_from_file(filename)
+def get_system_message():
+    return unquote(api_request(get_config().get('server_urls').get('nlp_url') + "/nlp/chat/system_message")['system_message'])
+
+
+@model_check()
+def change_system_message(msg):
+    return api_request(get_config().get('server_urls').get('nlp_url') + "/nlp/chat/set_system_message", {'text': quote(msg)})
+
+
+@model_check()
+def change_last_message(msg):
+    return api_request(get_config().get('server_urls').get('nlp_url') + "/nlp/chat/change_last_message", {'text': quote(msg)})
+
+
+@model_check()
+def change_last_user_message(msg):
+    return api_request(get_config().get('server_urls').get('nlp_url') + "/nlp/chat/change_last_user_message", {'text': quote(msg)})

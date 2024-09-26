@@ -5,8 +5,9 @@ import logging as log
 import sounddevice as sd
 from core.scripts.config_manager import get_config
 from datetime import datetime
+from requests import get
 
-samplerate = int(get_config()['tts']['tts_sample_rate'])
+samplerate = int(get_config()['tts']['sts_sample_rate'])
 
 log.basicConfig(filename=get_config()['log']['logfile'], level=log.ERROR,
                     format='%(asctime)s - %(levelname)s : %(message)s',
@@ -35,6 +36,8 @@ def say(data, sr=samplerate):
     sd.wait()
     sd.stop()
 
+def api_request(address: str, request_body: dict = None) -> dict:
+    return get(address, json=request_body).json()
 
 def generate_template(template):
     current_date = datetime.now()
