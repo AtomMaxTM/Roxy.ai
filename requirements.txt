@@ -28,3 +28,4 @@ transformers~=4.37.2
 attrs~=23.1.0
 click~=8.1.7
 keyboard~=0.13.5
+aiortc
