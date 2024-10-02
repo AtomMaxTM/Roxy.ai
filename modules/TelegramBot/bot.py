@@ -8,7 +8,8 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from core.scripts.config_manager import get_config
 from modules.TelegramBot.tools import Decorators, TempMessage
-from modules.TelegramBot.handler import Handler, MessageStack, Answering, chat
+from modules.TelegramBot.handler import Handler, MessageStack, Answering
+from core.api.oldapi.nlp import chat
 from time import sleep
 from random import choice
 

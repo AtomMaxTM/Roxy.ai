@@ -43,7 +43,7 @@ stt_model.load_vosk()
 
 class STT:
     """
-    STT(Speech To Text) class realization
+    STT(Speech To Text) class implementation
     Uses eff_word_net for wakeword detection and vosk stt from speech recognition
     """
 

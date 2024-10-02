@@ -7,3 +7,4 @@ core/models/nlp/command/bin_dataset_generator/input/extract_flibusta_dialogues_c
 desktop.ini
 chat_files/chats/*.json
 logs.log
+*.log

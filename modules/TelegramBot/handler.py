@@ -4,11 +4,11 @@ from json import load, dump
 import librosa
 from scipy.io import wavfile
 from core.scripts.config_manager import get_config
-from core.api.nlp.translate_local import user_to_llm, llm_to_user
-from core.api.nlp.enhance import enhance
-from core.api.voice.generate_voice import change_voice, generate_raw_ssml_voice
-from core.api.voice.transcribe_voice import transcribe_audio
-import core.api.nlp.chat as chat
+from core.api.oldapi.nlp.translate_local import user_to_llm, llm_to_user
+from core.api.oldapi.nlp.enhance import enhance
+from core.api.oldapi.voice.generate_voice import change_voice, generate_raw_ssml_voice
+from core.api.oldapi.voice.transcribe_voice import transcribe_audio
+import core.api.oldapi.nlp.chat as chat
 from core.scripts.tools import log_error
 from icecream import ic
 

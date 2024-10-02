@@ -69,16 +69,16 @@ class SileroModel:
     def raw_generate(self, text: str):
         if self.model is None:
             return Response(-1, 'Model is not loaded', data=None)
-        try:
-            synt = self.model.apply_tts(
-                text=text,
-                speaker=self.config["tts_speaker"],
-                sample_rate=int(self.config['tts_sample_rate']),
-                put_accent=True,
-                put_yo=True
-            ).numpy()
-        except Exception as e:
-            return Response(0, 'An error occurred while generating raw voice via silero', e, data=None)
+        # try:
+        synt = self.model.apply_tts(
+            text=text,
+            speaker=self.config["tts_speaker"],
+            sample_rate=int(self.config['tts_sample_rate']),
+            put_accent=True,
+            put_yo=True
+        ).numpy()
+        # except Exception as e:
+        #     return Response(0, 'An error occurred while generating raw voice via silero', e, data=None)
         return Response(1, "Raw voice was generated successfully", data=synt)
 
     def reset(self) -> Response:
@@ -86,19 +86,60 @@ class SileroModel:
         self.model = None
         return Response(1, 'Silero model was reset successfully')
 
-silero = SileroModel()
-rvc = RVC_Model()
 
-silero_load = silero.load_model()
-if not silero_load.status:
-    raise silero_load.error
+class XTTS_Model:
+    def __init__(self):
+        tts_config = get_config()["xtts"]
+        from TTS.tts.configs.xtts_config import XttsConfig
+        from TTS.tts.models.xtts import Xtts
+
+        self.config = XttsConfig()
+        self.config.load_json(tts_config['model_path'] + '/config.json')
+        self.model = Xtts.init_from_config(self.config)
+        self.model.load_checkpoint(self.config, checkpoint_dir=tts_config['model_path'] + '/', eval=True)
+        self.model.cuda()
+
+    def __call__(self, text: str):
+        config = get_config()["xtts"]
+        try:
+            outputs = self.model.synthesize(
+                text,
+                self.config,
+                speaker_wav=config['ref_path'],
+                language=config['lang'],
+                temperature=float(config.get('temperature', 0.8)),
+                top_k=int(config.get('top_k', 50)),
+                top_p=float(config.get('top_p', 0.85)),
+                gpt_cond_len=int(config.get('gpt_cond_len', 30))
+            )
+        except Exception as e:
+            return Response(0, 'An error occurred while generating voice with xTTSv2', e, data=None)
+        return Response(1, "Voice was generated successfully", data=outputs['wav'])
+
 
 class TTS:
     def __init__(self):
         self.config = get_config()["tts"]
+        engine_type = self.config["engine_type"]
+        if engine_type in ('silero', 'rvc'):
+            self.silero = SileroModel()
+            silero_load = self.silero.load_model()
+            if not silero_load.status:
+                raise silero_load.error
+        if engine_type == 'rvc':
+            self.rvc = RVC_Model()
+        elif engine_type == 'xtts':
+            self.xtts = XTTS_Model()
+
 
     def __call__(self, text: str, ssml: bool = False):
-        res = silero.raw_generate(text) if not ssml else silero.raw_ssml_generate(text)
-        if res.status in [-1, 0]:
-            return res
-        return rvc(res.data)
+        if self.config['engine_type'] in ['silero', 'rvc']:
+            res = self.silero.raw_generate(text) if not ssml else self.silero.raw_ssml_generate(text)
+            if res.status in [-1, 0]:
+                return res
+            if self.config['engine_type'] == 'silero':
+                return res.data
+            else:
+                return self.rvc(res.data)
+        else:
+            return self.xtts(text)
