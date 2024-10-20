@@ -89,7 +89,14 @@ class MessageDB:
     def search(self, message: str, top_k: int = 5) -> List[Dict[str, Any]]:
         vector = self.db.embed(message).squeeze(0).tolist()[0]
         search_results = self.db.search(self.collection_name, vector, top_k)
-        return [{"message": result.payload['message'], "id": result.payload['id']} for result in search_results]
+        return [
+            {
+                "message": result.payload['message'],
+                "role": result.payload['role'],
+                "id": result.payload['id']
+            }
+            for result in search_results
+        ]
 
     def delete_message(self, message_id: str):
         self.db.delete_by_id(self.collection_name, [message_id])

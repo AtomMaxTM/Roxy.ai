@@ -1,6 +1,16 @@
 from core.scripts.tools import api_request
 from core.scripts.config_manager import get_config
 from urllib.parse import quote, unquote
+# from googletrans import Translator
+#
+# translator = Translator()
+#
+# def google_user_to_llm(text):
+#     return translator.translate(text, 'ru', 'en').text
+#
+# def google_llm_to_user(text):
+#     return translator.translate(text, 'ru', 'en').text
+
 
 def user_to_llm(text):
     return unquote(

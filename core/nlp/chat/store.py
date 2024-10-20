@@ -65,7 +65,7 @@ class ChatStore:
     def save_chat(self, filename: str):
         try:
             with open(get_config()["chat"]["chats"] + filename + '.json', 'w', encoding='utf-8') as f:
-                dump({'chat_name': self.chat_name, 'system_message': self.system_message["content"], 'messages': self.store}, f)
+                dump({'chat_name': self.chat_name, 'system_message': self.system_message["content"], 'messages': self.store}, f, ensure_ascii=False)
         except Exception as e:
             res = Response(0, 'An error occurred while saving chat', e)
             log_error(res)

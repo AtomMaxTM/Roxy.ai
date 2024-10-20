@@ -40,7 +40,6 @@ class Chat:
 
     def load_last_chat(self):
         res = self.store.load_from_json(get_config()["chat"]["chats"] + self.store.chat_name + ".json")
-        print(res)
         if not res.status:
             res = self.store.save_chat(self.store.chat_name)
         return res
