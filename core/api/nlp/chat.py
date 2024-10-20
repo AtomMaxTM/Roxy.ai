@@ -37,20 +37,22 @@ def reset_chat():
 
 
 @model_check()
-def send_message(msg, new_tokens=60):
+def send_message(msg, new_tokens=60, temp=0.8):
     return unquote(
-        api_request(get_config().get('server_urls').get('nlp_url') + '/nlp/chat/generate', {'prompt': quote(msg), 'max_tokens': new_tokens})['generated'])
+        api_request(get_config().get('server_urls').get('nlp_url') + '/nlp/chat/generate', {'prompt': quote(msg), 'max_tokens': new_tokens, 'temp': temp})['generated']
+    )
 
 
 @model_check()
-def generate_no_chat(msg, new_tokens=60):
+def generate_no_chat(msg, new_tokens=60, temp=0.8):
     return unquote(
-        api_request(get_config().get('server_urls').get('nlp_url') + '/nlp/chat/raw_generate', {'prompt': quote(msg), 'max_tokens': new_tokens})['generated'])
+        api_request(get_config().get('server_urls').get('nlp_url') + '/nlp/chat/raw_generate', {'prompt': quote(msg), 'max_tokens': new_tokens, 'temp': temp})['generated']
+    )
 
 
 @model_check()
-def regenerate_last_message():
-    return unquote(api_request(get_config().get('server_urls').get('nlp_url') + '/nlp/chat/regenerate')['generated'])
+def regenerate_last_message(new_tokens=60):
+    return unquote(api_request(get_config().get('server_urls').get('nlp_url') + '/nlp/chat/regenerate', {'tokens': new_tokens})['generated'])
 
 
 # @model_check()
@@ -58,41 +60,37 @@ def regenerate_last_message():
 #     return chat.store.load_chat(chat_name)
 
 
-@model_check()
 def get_chat():
     return api_request(get_config().get('server_urls').get('nlp_url') + "/nlp/chat/history")['chat']
 
 
-@model_check()
 def is_empty():
-    return bool(len(api_request(get_config().get('server_urls').get('nlp_url') + "/nlp/chat/history")['chat'][1:]))
+    return not bool(len(api_request(get_config().get('server_urls').get('nlp_url') + "/nlp/chat/history")['chat'][1:]))
 
 
-@model_check()
 def get_chat_name():
-    return api_request(get_config().get('server_urls').get('nlp_url') + "/nlp/chat/history")['chat']
+    return api_request(get_config().get('server_urls').get('nlp_url') + "/nlp/chat/name")['name']
 
 
-@model_check()
 def remove_last_message():
     return api_request(get_config().get('server_urls').get('nlp_url') + "/nlp/chat/remove_last_message")
 
 
-@model_check()
 def get_system_message():
     return unquote(api_request(get_config().get('server_urls').get('nlp_url') + "/nlp/chat/system_message")['system_message'])
 
 
-@model_check()
 def change_system_message(msg):
     return api_request(get_config().get('server_urls').get('nlp_url') + "/nlp/chat/set_system_message", {'text': quote(msg)})
 
 
-@model_check()
 def change_last_message(msg):
     return api_request(get_config().get('server_urls').get('nlp_url') + "/nlp/chat/change_last_message", {'text': quote(msg)})
 
 
-@model_check()
 def change_last_user_message(msg):
     return api_request(get_config().get('server_urls').get('nlp_url') + "/nlp/chat/change_last_user_message", {'text': quote(msg)})
+
+
+def load_last_chat():
+    return api_request(get_config().get('server_urls').get('nlp_url') + '/nlp/chat/load_last_chat')

@@ -62,7 +62,7 @@ class Add_MDB(BaseModel):
 
 
 class Search_MDB(BaseModel):
-    message: list[float]
+    message: str
     top_k: int = 5
 
 
@@ -91,71 +91,71 @@ async def embed(message: Text):
     return {'embedding': data}
 
 
-#       Vector DB
-@app.get('/nlp/chat/db/create_collection')
-async def create_collection(name: Text):
-    name = unquote(name.dict()['text'])
-    res = vdb.create_collection(name)
-    if res.status == -1:
-        return {'status': 0, 'error': quote(res.message)}
-    return {'status': 1}
-
-
-@app.get('/nlp/chat/db/add')
-async def add_vdb(body: Add_VDB):
-    body = body.dict()
-    try:
-        vdb.add(
-            unquote(body['collection_name']),
-            body['vectors'],
-            body['payloads'],
-            body['uids']
-        )
-    except Exception as e:
-        return {'status': 0, 'error': e}
-    return {'status': 1}
-
-
-@app.get('/nlp/chat/db/search')
-async def search_vdb(body: Search_VDB):
-    body = body.dict()
-    try:
-        res = vdb.search(
-            unquote(body['collection_name']),
-            body['vector'],
-            body['top_k']
-        )
-    except Exception as e:
-        return {'status': 0, 'error': e}
-    return {'status': 1, 'search_result': res}
-
-
-@app.get('/nlp/chat/db/delete_by_id')
-async def del_by_id(body: Del_by_id_VDB):
-    body = body.dict()
-    try:
-        vdb.delete_by_id(
-            unquote(body['collection_name']),
-            body['ids']
-        )
-    except Exception as e:
-        return {'status': 0, 'error': e}
-    return {'status': 1}
-
-
-@app.get('/nlp/chat/db/delete_collection')
-async def del_delete(body: Text):
-    try:
-        vdb.delete_collection(unquote(body.dict()['text']))
-    except Exception as e:
-        return {'status': 0, 'error': e}
-    return {'status': 1}
+# #       Vector DB
+# @app.get('/nlp/chat/db/create_collection')
+# async def create_collection(name: Text):
+#     name = unquote(name.dict()['text'])
+#     res = vdb.create_collection(name)
+#     if res.status == -1:
+#         return {'status': 0, 'error': quote(res.message)}
+#     return {'status': 1}
+#
+#
+# @app.get('/nlp/chat/db/add')
+# async def add_vdb(body: Add_VDB):
+#     body = body.dict()
+#     try:
+#         vdb.add(
+#             unquote(body['collection_name']),
+#             body['vectors'],
+#             body['payloads'],
+#             body['uids']
+#         )
+#     except Exception as e:
+#         return {'status': 0, 'error': e}
+#     return {'status': 1}
+#
+#
+# @app.get('/nlp/chat/db/search')
+# async def search_vdb(body: Search_VDB):
+#     body = body.dict()
+#     try:
+#         res = vdb.search(
+#             unquote(body['collection_name']),
+#             body['vector'],
+#             body['top_k']
+#         )
+#     except Exception as e:
+#         return {'status': 0, 'error': e}
+#     return {'status': 1, 'search_result': res}
+#
+#
+# @app.get('/nlp/chat/db/delete_by_id')
+# async def del_by_id(body: Del_by_id_VDB):
+#     body = body.dict()
+#     try:
+#         vdb.delete_by_id(
+#             unquote(body['collection_name']),
+#             body['ids']
+#         )
+#     except Exception as e:
+#         return {'status': 0, 'error': e}
+#     return {'status': 1}
+#
+#
+# @app.get('/nlp/chat/db/delete_collection')
+# async def del_delete(body: Text):
+#     try:
+#         vdb.delete_collection(unquote(body.dict()['text']))
+#     except Exception as e:
+#         return {'status': 0, 'error': e}
+#     return {'status': 1}
 
 
 #       Message DB
 
-@app.get('/nlp/chat/msg_add')
-async def add_mdb(body: Add_VDB):
+@app.get('/nlp/chat/msg/add')
+async def add_mdb(body: Add_MDB):
     body = body.dict()
     try:
         uid = db.add_message(unquote(body['message']), unquote(body['role']))
@@ -230,6 +230,7 @@ async def enhance(text: Text):
 #   Model
 @app.get('/nlp/chat/raw_generate')
 async def generate(body: ModelGenerate):
+    print(body)
     body = body.dict()
     generated = md.model(unquote(body['prompt']), max_tokens=body['max_tokens'], stop=[f"User:"],
                          temperature=0.8, echo=True)
@@ -250,8 +251,9 @@ async def chat_generate(body: ModelGenerate):
 
 
 @app.get('/nlp/chat/regenerate')
-async def chat_regenerate():
-    generate = chat.regenerate_last()
+async def chat_regenerate(body: ChatRegenerate):
+    body = body.dict()
+    generate = chat.regenerate_last(body['tokens'])
     return {'generated': quote(generate)}
 
 
@@ -281,7 +283,7 @@ async def get_chat_name():
 @app.get('/nlp/chat/set_system_message')
 async def set_system_message(body: Text):
     body = body.dict()
-    chat.store.change_system_message(body['text'])
+    chat.store.change_system_message(unquote(body['text']))
     return {'status': 1}
 
 
@@ -310,6 +312,12 @@ async def change_last_user_message(body: Text):
         return {'status': 0, 'error': quote(res.message)}
     return {'status': 1}
 
+@app.get('/nlp/chat/load_last_chat')
+async def change_last_user_message():
+    res = chat.load_last_chat()
+    if res.status == -1:
+        return {'status': 0, 'error': quote(res.message)}
+    return {'status': 1}
 
 @app.get('/nlp/chat/model_loaded')
 async def model_loaded():

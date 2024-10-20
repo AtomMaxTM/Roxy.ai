@@ -29,5 +29,7 @@ def tts(text: str, ssml: bool = False):
     """
 
     return np.array(
-        api_request(get_config().get('server_urls').get('tts_url') + '/tts', {"text": quote(text), "ssml": ssml})[
-            'voice'])
+            api_request(
+                get_config().get('server_urls').get('tts_url') + '/tts', {"text": quote(text), "ssml": ssml}
+            )['voice']
+        )
